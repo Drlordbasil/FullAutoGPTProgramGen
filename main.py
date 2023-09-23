@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import scrolledtext, Button, Label, OptionMenu, StringVar
 import threading
 import chat as AIChat
+import plugin as PluginManager
 logging.basicConfig(level=logging.INFO, filename='ai_chat.log')
 
 @contextmanager
