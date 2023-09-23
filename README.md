@@ -89,6 +89,17 @@ The application generates a log file named `ai_chat.log` that stores all the int
 
 Contributions are welcome! Please read the contributing guidelines before making any changes.
 
+## Contact
+
+For any queries or further clarification, feel free to reach out to the project maintainer at [drlordbasil@gmail.com](mailto:drlordbasil@gmail.com).
+
+## Donation
+
+If you find this project useful and would like to support its development, you can make a donation through the following platforms:
+
+- **CashApp**: [$doctorlordbasil](https://cash.app/$doctorlordbasil)
+- **PayPal**: [Donate via PayPal](https://paypal.me/chaoticbasil?country.x=US&locale.x=en_US)
+
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
