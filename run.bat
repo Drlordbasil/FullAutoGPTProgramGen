@@ -1,7 +1,5 @@
 @echo off
-pip freeze > installed.txt
-for /F "delims==" %%i in (installed.txt) do findstr /B /L %%i requirements.txt || pip uninstall -y %%i
-del installed.txt
+python compare_requirements.py
 pip install -r requirements.txt
-python MasterAI.py
+python main.py
 pause
