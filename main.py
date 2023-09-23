@@ -1,41 +1,47 @@
-"""
-OpenAI Master-Slave Plugin System
-"""
-
 import openai
 import re
 import os
 import subprocess
 import logging
-import time
+import tempfile
+import asyncio
+import json
+from contextlib import contextmanager
 
-def read_local_file(filepath: str) -> str:
-    with open(filepath, "r") as file:
-        return file.read()
+logging.basicConfig(level=logging.INFO, filename='ai_chat.log')
 
-log = logging.basicConfig(level=logging.INFO)
+@contextmanager
+def temp_file(content):
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False) as f:
+        f.write(content)
+        temp_name = f.name
+    yield temp_name
+    os.unlink(temp_name)
 
-class CommandExecutor:
-    @staticmethod
-    def execute_python_code(code: str) -> str:
-        with open('temp.py', 'w') as f:
-            f.write(code)
-        process = subprocess.Popen(['python', 'temp.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        return stdout.decode() + stderr.decode()
+async def execute_python_code(code: str) -> str:
+    with temp_file(code) as temp_name:
+        process = await asyncio.create_subprocess_exec('python', temp_name, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await process.communicate()
+    return stdout.decode() + stderr.decode()
 
-class Listener:
-    @staticmethod
-    def detect_python_code(message: str) -> bool:
-        return '```python' in message and '```' in message
+def load_or_create_config(file_path='config.json'):
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            return json.load(f)
+    else:
+        openai_api_key = input("Enter your OpenAI API key: ")
+        config = {"openai_api_key": openai_api_key}
+        with open(file_path, 'w') as f:
+            json.dump(config, f)
+        return config
 
-    @staticmethod
-    def extract_python_code(message: str) -> str:
-        code_pattern = re.compile(r'```python([\s\S]*?)```')
-        match = code_pattern.search(message)
-        if match:
-            return match.group(1).strip()
-        return ""
+def detect_python_code(message: str) -> bool:
+    return '```python' in message and '```' in message
+
+def extract_python_code(message: str) -> str:
+    code_pattern = re.compile(r'```python([\s\S]*?)```')
+    match = code_pattern.search(message)
+    return match.group(1).strip() if match else ""
 
 class PluginManager:
     PLUGIN_DIR = "plugins"
@@ -44,75 +50,65 @@ class PluginManager:
         if not os.path.exists(self.PLUGIN_DIR):
             os.makedirs(self.PLUGIN_DIR)
 
+    def load_all_plugins(self):
+        for plugin_name in os.listdir(self.PLUGIN_DIR):
+            if plugin_name.endswith('.py'):
+                self.load_plugin(plugin_name[:-3])
+
     def load_plugin(self, plugin_name: str):
         plugin_path = os.path.join(self.PLUGIN_DIR, f"{plugin_name}.py")
         if os.path.exists(plugin_path):
             with open(plugin_path, 'r') as f:
                 code = f.read()
                 exec(code, globals())
-        else:
-            print(f"Plugin {plugin_name} not found!")
 
-class OpenAIChats():
-    def __init__(self):
-        self.context = {}
+class AIChat:
+    def __init__(self, role_description, api_key):
+        self.role_description = role_description
+        self.api_key = api_key
 
-    def _send_request_to_openai(self, messages):
+    async def chat(self, message: str) -> str:
+        messages = [{"role": "system", "content": self.role_description}, {"role": "user", "content": message}]
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-16k",
-                max_tokens=8000,
-                messages=messages
-            )
+            response = openai.ChatCompletion.create(model="gpt-3.5-turbo-16k", max_tokens=8000, messages=messages, api_key=self.api_key)
             return response['choices'][0]['message']['content']
-        except openai.error.OpenAIError as e:
-            print(f"An error occurred with OpenAI: {str(e)}")
+        except Exception as e:
+            logging.error(f"OpenAI Error: {e}")
             return None
 
-    def MasterAI(self, message: str) -> str:
-        messages = [
-            {"role": "system", "content": "you are a master AI with a slave AI you can ask questions and discuss things with."},
-            {"role": "user", "content": message}
-        ]
-        return self._send_request_to_openai(messages)
-
-    def SlaveAI(self, message: str) -> str:
-        messages = [
-            {"role": "system", "content": "you are a helpful assistant to an AI master who needs you sometimes."},
-            {"role": "user", "content": message}
-        ]
-        return self._send_request_to_openai(messages)
-
-def main():
-    chat = OpenAIChats()
+async def main():
+    config = load_or_create_config()
+    master_chat = AIChat("you are a master AI with a slave AI you can ask questions and discuss things with.", config['openai_api_key'])
+    slave_chat = AIChat("you are a helpful assistant to an AI master who needs you sometimes.", config['openai_api_key'])
     plugin_manager = PluginManager()
+    plugin_manager.load_all_plugins()
     master_message = "Hello slave, let's create a mindblowing software. Start by giving me an idea."
-    
+
     while True:
-        slave_response = chat.SlaveAI(master_message)
-        print("SlaveAI:", slave_response)
-        
-        if Listener.detect_python_code(slave_response):
-            code = Listener.extract_python_code(slave_response)
-            output = CommandExecutor.execute_python_code(code)
-            print("Code Output:", output)
-            master_message = f"The code executed with the following output: {output}. Please advise on the next steps."
+        slave_response = await slave_chat.chat(master_message)
+        logging.info(f"SlaveAI: {slave_response}")
+
+        if detect_python_code(slave_response):
+            code = extract_python_code(slave_response)
+            output = await execute_python_code(code)
+            logging.info(f"Code Output: {output}")
+            master_message = f"The code executed with the following output: {output}. What's next?"
             continue
-        
-        master_response = chat.MasterAI(slave_response)
-        print("MasterAI:", master_response)
-        
-        if Listener.detect_python_code(master_response):
-            code = Listener.extract_python_code(master_response)
-            output = CommandExecutor.execute_python_code(code)
-            print("Code Output:", output)
-            master_message = f"The code executed with the following output: {output}. Please advise on the next steps."
+
+        master_response = await master_chat.chat(slave_response)
+        logging.info(f"MasterAI: {master_response}")
+
+        if detect_python_code(master_response):
+            code = extract_python_code(master_response)
+            output = await execute_python_code(code)
+            logging.info(f"Code Output: {output}")
+            master_message = f"The code executed with the following output: {output}. What's next?"
             continue
-        
+
         if "done" in master_response.lower() or "completed" in master_response.lower():
             break
 
         master_message = master_response
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
