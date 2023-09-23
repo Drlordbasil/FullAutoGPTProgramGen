@@ -6,6 +6,7 @@ import tempfile
 import asyncio
 import json
 from contextlib import contextmanager
+from github import Github, GithubException
 import tkinter as tk
 from tkinter import scrolledtext, Button, Label, OptionMenu, StringVar
 import threading
@@ -70,21 +71,24 @@ def log_viewer():
     auto_refresh_log(frame)
     root.mainloop()
 
-class PluginManager:
-    PLUGIN_DIR = "plugins"
-    def __init__(self):
-        if not os.path.exists(self.PLUGIN_DIR):
-            os.makedirs(self.PLUGIN_DIR)
-    def load_all_plugins(self):
-        for plugin_name in os.listdir(self.PLUGIN_DIR):
-            if plugin_name.endswith('.py'):
-                self.load_plugin(plugin_name[:-3])
-    def load_plugin(self, plugin_name):
-        plugin_path = os.path.join(self.PLUGIN_DIR, f"{plugin_name}.py")
-        if os.path.exists(plugin_path):
-            with open(plugin_path, 'r') as f:
-                code = f.read()
-                exec(code, globals())
+class GitHubManager:
+    def __init__(self, token):
+        self.github = Github(token)
+        self.user = self.github.get_user()
+    
+    def get_or_create_repo(self, repo_name, description=""):
+        try:
+            repo = self.user.get_repo(repo_name)
+        except GithubException:
+            repo = self.user.create_repo(repo_name, description=description)
+        return repo
+    
+    def update_file(self, repo, file_path, commit_message, content):
+        try:
+            file = repo.get_contents(file_path)
+            repo.update_file(file.path, commit_message, content, file.sha)
+        except GithubException:
+            repo.create_file(file_path, commit_message, content)
 
 class AIChat:
     def __init__(self, role_description, api_key):
@@ -92,13 +96,11 @@ class AIChat:
         self.api_key = api_key
 
     async def chat(self, message):
-        # Enhanced system message to guide the AI's behavior
         system_message = {
             "role": "system",
             "content": f"{self.role_description}. Your task is to engage in a complex dialogue about Python programming, including generating Python code snippets that solve specific problems."
         }
         
-        # User message with more context for better code generation
         user_message = {
             "role": "user",
             "content": f"{message}. Please provide a Python code snippet that demonstrates your solution, and explain the logic behind it."
@@ -118,14 +120,13 @@ class AIChat:
             logging.error(f"OpenAI Error: {e}")
             return "An error occurred."
 
-
 async def main():
     config = load_or_create_config()
-    master_chat = AIChat("you are a master AI with a slave AI you can ask questions and discuss things with.", config['openai_api_key'])
-    slave_chat = AIChat("you are a helpful assistant to an AI master who needs you sometimes.", config['openai_api_key'])
-    plugin_manager = PluginManager()
-    plugin_manager.load_all_plugins()
-    master_message = "Hello to you my new collegue, let's create a mindblowing software in python code. Start by giving me an idea alongside a python script, this should be our desired format."
+    github_manager = GitHubManager("YOUR_GITHUB_TOKEN")
+    master_chat = AIChat("You are a master AI with a slave AI you can ask questions and discuss things with.", config['openai_api_key'])
+    slave_chat = AIChat("You are a helpful assistant to an AI master who needs you sometimes.", config['openai_api_key'])
+    master_message = "Hello to you my new colleague, let's create mind-blowing software in Python code. Start by giving me an idea alongside a Python script, this should be our desired format."
+    
     while True:
         slave_response = await slave_chat.chat(master_message)
         logging.info(f"SlaveAI: {slave_response}")
