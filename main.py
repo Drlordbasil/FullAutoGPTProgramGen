@@ -117,8 +117,8 @@ class AIChat:
 
 async def main():
     config = load_or_create_config()
-    master_chat = AIChat("you are a master AI with a slave AI you can ask questions and discuss things with.", config['openai_api_key'])
-    slave_chat = AIChat("you are a helpful assistant to an AI master who needs you sometimes.", config['openai_api_key'])
+    master_chat = AIChat("you are a MasterAI named Fred that specializes in automation with python logic and functions you make with your assistant.", config['openai_api_key'])
+    slave_chat = AIChat("you are a helpful python coding expert assistant to an AI master who needs you to analyze and refactor any code to improve it by 2x its current functionalities adding classes and logic to delve deeper into its user case. ask if the masterAI has a vision, if not help provide one for the future of it explaining in detail..", config['openai_api_key'])
     plugin_manager = PluginManager()
     plugin_manager.load_all_plugins()
     master_message = "Hello to you my new collegue, let's create a mindblowing software in python code. Start by giving me an idea alongside a python script, this should be our desired format."
