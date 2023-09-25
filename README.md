@@ -1,7 +1,6 @@
-# FullAutoGPTProgramGen: Autonomous GPT-3.5 Turbo Master-Slave Conversational Interface with Extensible Plugins
+# GPT-3.5-Auto-Conversational-Interface: Master-Slave AI Conversations with Extensible Plugins
 
 ## Table of Contents
-
 1. [Introduction](#introduction)
 2. [Features](#features)
 3. [System Architecture](#system-architecture)
@@ -19,8 +18,7 @@
 15. [License](#license)
 
 ## Introduction
-
-FullAutoGPTProgramGen is a state-of-the-art Python application designed to facilitate dynamic, autonomous conversations between two AI entities: a Master AI and a Slave AI. Utilizing OpenAI's GPT-3.5 Turbo API, the Master AI can initiate dialogues, ask questions, and execute Python code via the Slave AI. The project is highly modular, featuring a Plugin Manager for seamless integration of additional functionalities and a real-time log viewer for debugging and monitoring.
+GPT-3.5-Auto-Conversational-Interface is a Python application designed to facilitate dynamic, autonomous conversations between two AI entities: a Master AI and a Slave AI. Utilizing OpenAI's GPT-3.5 Turbo API, the Master AI can initiate dialogues, ask questions, and execute Python code via the Slave AI. The project is highly modular, featuring a Plugin Manager for seamless integration of additional functionalities and a real-time log viewer for debugging and monitoring.
 
 ## Features
 
