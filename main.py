@@ -15,6 +15,9 @@ logging.basicConfig(level=logging.INFO, filename='ai_chat.log')
 
 @contextmanager
 def temp_file(content):
+    """
+    Context manager for creating a temporary file.
+    """
     with tempfile.NamedTemporaryFile(mode='w+', delete=False) as f:
         f.write(content)
         temp_name = f.name
@@ -22,6 +25,9 @@ def temp_file(content):
     os.unlink(temp_name)
 
 async def execute_python_code(code):
+    """
+    Asynchronously execute Python code and return the output.
+    """
     with temp_file(code) as temp_name:
         process = await asyncio.create_subprocess_exec('python', temp_name, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         stdout, stderr = await process.communicate()
