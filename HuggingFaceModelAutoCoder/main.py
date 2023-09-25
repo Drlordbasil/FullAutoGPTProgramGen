@@ -12,6 +12,12 @@ def main():
         f.write(generated_code)
     
     generate_exe("generated_code.py")
-
+    # Fine-tuning
+    fine_tune_model(model_name, "datasets/dataset1.csv", "models/fine_tuned_model")
+    
+    # Plugin Execution
+    listener = Listener()
+    # Register plugins here
+    listener.execute_plugins(generated_code)
 if __name__ == "__main__":
     main()
