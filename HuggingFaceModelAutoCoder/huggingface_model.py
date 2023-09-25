@@ -1,18 +1,12 @@
-from huggingface_model import initialize_model, generate_code
-from exe_generator import generate_exe
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-def main():
-    model_name = "EleutherAI/gpt-neo-1.3B"  # Corrected model identifier
-    use_auth_token = True  # Set to True if you are authenticated
-    tokenizer, model = initialize_model(model_name, use_auth_token)
-    
-    prompt = "Create a Python script for a simple calculator."
-    generated_code = generate_code(tokenizer, model, prompt)
-    
-    with open("generated_code.py", "w") as f:
-        f.write(generated_code)
-    
-    generate_exe("generated_code.py")
+def initialize_model(model_name, use_auth_token):
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_auth_token=use_auth_token)
+    model = AutoModelForCausalLM.from_pretrained(model_name, use_auth_token=use_auth_token)
+    return tokenizer, model
 
-if __name__ == "__main__":
-    main()
+def generate_code(tokenizer, model, prompt):
+    inputs = tokenizer(prompt, return_tensors="pt")
+    outputs = model.generate(inputs.input_ids, max_length=100)
+    generated_code = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return generated_code
