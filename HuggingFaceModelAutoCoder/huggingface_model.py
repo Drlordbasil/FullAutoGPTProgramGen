@@ -1,19 +1,18 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import re
+from huggingface_model import initialize_model, generate_code
+from exe_generator import generate_exe
 
-def initialize_model(model_name):
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-    tokenizer.pad_token = tokenizer.eos_token  # Set the padding token
-    return tokenizer, model
+def main():
+    model_name = "EleutherAI/gpt-neo-1.3B"  # Corrected model identifier
+    use_auth_token = True  # Set to True if you are authenticated
+    tokenizer, model = initialize_model(model_name, use_auth_token)
+    
+    prompt = "Create a Python script for a simple calculator."
+    generated_code = generate_code(tokenizer, model, prompt)
+    
+    with open("generated_code.py", "w") as f:
+        f.write(generated_code)
+    
+    generate_exe("generated_code.py")
 
-def generate_code(tokenizer, model, prompt):
-    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
-    attention_mask = inputs.attention_mask
-    input_ids = inputs.input_ids
-
-    outputs = model.generate(input_ids, attention_mask=attention_mask, max_length=100, num_return_sequences=1)
-    raw_code = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-    code = re.sub(r'#.*|\n\s*#.*', '', raw_code).strip()
-    return code
+if __name__ == "__main__":
+    main()
